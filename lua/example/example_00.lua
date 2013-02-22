@@ -61,7 +61,7 @@ args = lapp [[
 
 local MQTT = require("mqtt_library")
 
-mqtt_client = MQTT.client.create(args.host, args.port, callback)
+local mqtt_client = MQTT.client.create(args.host, args.port, callback)
 
 mqtt_client:connect(args.id)
 

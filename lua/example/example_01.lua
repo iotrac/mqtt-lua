@@ -57,8 +57,8 @@ args = lapp [[
 
 local MQTT = require("mqtt_library")
 
-mqtt_client1 = MQTT.client.create(args.host_s, args.port_s, callback)
-mqtt_client2 = MQTT.client.create(args.host_p, args.port_p)
+local mqtt_client1 = MQTT.client.create(args.host_s, args.port_s, callback)
+local mqtt_client2 = MQTT.client.create(args.host_p, args.port_p)
 
 mqtt_client1:connect(args.id .. "a")
 mqtt_client2:connect(args.id .. "b")

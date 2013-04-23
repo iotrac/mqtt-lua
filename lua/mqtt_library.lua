@@ -15,12 +15,12 @@
 --
 -- Documentation
 -- ~~~~~~~~~~~~~
--- MQTT Lua web-site
---   http://eclipse.org/paho/...  -- FILL ME IN !
+-- Paho MQTT Lua website
+--   http://eclipse.org/paho/
 --
 -- References
 -- ~~~~~~~~~~
--- MQTT web-site
+-- MQTT Community
 --   http://mqtt.org
 
 -- MQTT protocol specification 3.1
@@ -99,7 +99,7 @@ MQTT.ERROR_TERMINATE = false      -- Message handler errors terminate process ?
 ---
 -- @field [parent = #mqtt_library] #string DEFAULT_BROKER_HOSTNAME
 --
-MQTT.DEFAULT_BROKER_HOSTNAME = "test.mosquitto.org"
+MQTT.DEFAULT_BROKER_HOSTNAME = "m2m.eclipse.org"
 
 ---
 -- An MQTT client

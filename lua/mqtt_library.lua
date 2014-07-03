@@ -198,7 +198,24 @@ function MQTT.client.create(                                      -- Public API
   return(mqtt_client)
 end
 
---- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
+--------------------------------------------------------------------------------
+-- Specify username and password before #client.connect
+--
+-- If called with empty _username_ or _password_, connection flags will be set
+-- but no string will be appended to payload.
+--
+-- @function [parent = #client] auth
+-- @param self
+-- @param #string username Name of the user who is connecting. It is recommended
+--                         that user names are kept to 12 characters.
+-- @param #string password Password corresponding to the user who is connecting.
+function MQTT.client.auth(self, username, password)
+  -- When no string is provided, remember current call to set flags
+  self.username = username or true
+  self.password = password or true
+end
+
+--------------------------------------------------------------------------------
 -- Transmit MQTT Client request a connection to an MQTT broker (server).
 -- MQTT 3.1 Specification: Section 3.1: CONNECT
 -- @param self
@@ -249,14 +266,20 @@ function MQTT.client:connect(                                     -- Public API
 -- bit    1: Clean session =  1
 -- bit    0: Unused        =  0
 
+  local username = self.username and 0x80 or 0
+  local password = self.password and 0x40 or 0
+  local flags    = username + password
+
   if (will_topic == nil) then
-    payload = payload .. string.char(0x02)       -- Clean session, no last will
+    -- Clean session, no last will
+    flags = flags + 0x02
   else
-    local flags
-    flags = MQTT.Utility.shift_left(will_retain, 5)
-    flags = flags + MQTT.Utility.shift_left(will_qos, 3) + 0x06
-    payload = payload .. string.char(flags)
+    flags = flags + MQTT.Utility.shift_left(will_retain, 5)
+    flags = flags + MQTT.Utility.shift_left(will_qos, 3)
+    -- Last will and clean session
+    flags = flags + 0x04 + 0x02
   end
+  payload = payload .. string.char(flags)
 
 -- Keep alive timer (bytes 11 LSB and 12 MSB, unit is seconds)
 -- ~~~~~~~~~~~~~~~~~
@@ -272,6 +295,15 @@ function MQTT.client:connect(                                     -- Public API
   if (will_topic ~= nil) then
     payload = payload .. MQTT.client.encode_utf8(will_topic)
     payload = payload .. MQTT.client.encode_utf8(will_message)
+  end
+
+  -- Username and password
+  -- ~~~~~~~~~~~~~~~~~~~~~
+  if type(self.username) == 'string' then
+    payload = payload .. MQTT.client.encode_utf8(self.username)
+  end
+  if type(self.password) == 'string' then
+    payload = payload .. MQTT.client.encode_utf8(self.password)
   end
 
 -- Send MQTT message

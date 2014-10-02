@@ -84,7 +84,7 @@ local MQTT = {}
 ---
 -- @field [parent = #mqtt_library] utility#utility Utility
 --
-MQTT.Utility = require("utility")
+MQTT.Utility = require "paho.utility"
 
 ---
 -- @field [parent = #mqtt_library] #number VERSION
@@ -860,6 +860,6 @@ function MQTT.client:unsubscribe(                                 -- Public API
   self.outstanding[self.message_id] = { "unsubscribe", topics }
 end
 
--- For ... MQTT = require("mqtt_library")
+-- For ... MQTT = require 'paho.mqtt'
 
 return(MQTT)

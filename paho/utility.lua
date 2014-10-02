@@ -234,7 +234,7 @@ Utility.socket_wait_connected = socket_wait_connected
 --
 Utility.table_to_string = table_to_string
 
--- For ... Utility = require("utility")
+-- For ... Utility = require 'paho.utility'
 
 return(Utility)
 

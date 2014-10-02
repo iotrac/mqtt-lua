@@ -1,6 +1,6 @@
 #!/usr/bin/lua
 --
--- example_00.lua
+-- example_02.lua
 -- ~~~~~~~~~~~~~~
 -- Version: 0.2 2012-06-01
 -- ------------------------------------------------------------------------- --
@@ -16,29 +16,12 @@
 --
 -- Description
 -- ~~~~~~~~~~~
--- Subscribe to a topic and publish all received messages on another topic.
+-- Publish a sequence of messages to a specified topic.
+-- Used to control some coloured RGB LEDs.
 --
 -- ToDo
 -- ~~~~
 -- - On failure, automatically reconnect to MQTT server.
--- - Error handling: MQTT.client.connect()
--- - Error handling: MQTT.client.destroy()
--- - Error handling: MQTT.client.disconnect()
--- - Error handling: MQTT.client.handler()
--- - Error handling: MQTT.client.publish()
--- - Error handling: MQTT.client.subscribe()
--- - Error handling: MQTT.client.unsubscribe()
--- ------------------------------------------------------------------------- --
-
-function callback(
-  topic,    -- string
-  message)  -- string
-
-  print("Topic: " .. topic .. ", message: '" .. message .. "'")
-
-  mqtt_client:publish(args.topic_p, message)
-end
-
 -- ------------------------------------------------------------------------- --
 
 function is_openwrt()
@@ -50,32 +33,36 @@ end
 if (not is_openwrt()) then require("luarocks.require") end
 local lapp = require("pl.lapp")
 
-args = lapp [[
-  Subscribe to topic_s and publish all messages on topic_p
-  -H,--host     (default localhost)   MQTT server hostname
-  -i,--id       (default example_00)  MQTT client identifier
-  -p,--port     (default 1883)        MQTT server port number
-  -s,--topic_s  (default test/1)      Subscribe topic
-  -t,--topic_p  (default test/2)      Publish topic
+local args = lapp [[
+  Subscribe to topic1 and publish all messages on topic2
+  -H,--host   (default localhost)   MQTT server hostname
+  -i,--id     (default example_02)  MQTT client identifier
+  -p,--port   (default 1883)        MQTT server port number
+  -s,--sleep  (default 5.0)         Sleep time between commands
+  -t,--topic  (default test/2)      Topic on which to publish
 ]]
 
-local MQTT = require("mqtt_library")
+local MQTT = require "paho.mqtt"
 
-local mqtt_client = MQTT.client.create(args.host, args.port, callback)
+local mqtt_client = MQTT.client.create(args.host, args.port)
 
 mqtt_client:connect(args.id)
 
-mqtt_client:subscribe({ args.topic_s })
-
 local error_message = nil
+local index = 1
+local messages = { "c010000", "c000100", "c000001" }
 
 while (error_message == nil) do
+  mqtt_client:publish(args.topic, messages[index]);
+
+  index = index + 1
+  if (index > #messages) then index = 1 end
+
+  socket.sleep(args.sleep)  -- seconds
   error_message = mqtt_client:handler()
-  socket.sleep(1.0)  -- seconds
 end
 
 if (error_message == nil) then
-  mqtt_client:unsubscribe({ args.topic_s })
   mqtt_client:destroy()
 else
   print(error_message)

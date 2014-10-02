@@ -182,41 +182,41 @@ The complete functioning code can be viewed here ...
     -- Define a function which is called by mqtt_client:handler(),
     -- whenever messages are received on the subscribed topics
 
-      function callback(topic, message)
-        print("Received: " .. topic .. ": " .. message)
-        if (message == "quit") then running = false end
-      end
+    function callback(topic, message)
+      print("Received: " .. topic .. ": " .. message)
+      if (message == "quit") then running = false end
+    end
 
     -- Create an MQTT client instance, connect to the MQTT server and
     -- subscribe to the topic called "test/2"
 
-      MQTT = require("mqtt_library")
-      MQTT.Utility.set_debug(true)
-      mqtt_client = MQTT.client.create("localhost", nil, callback)
-      mqtt_client:connect("lua mqtt client"))
-      mqtt_client:subscribe({"test/2"})
+    MQTT = require "paho.mqtt"
+    MQTT.Utility.set_debug(true)
+    mqtt_client = MQTT.client.create("localhost", nil, callback)
+    mqtt_client:connect("lua mqtt client"))
+    mqtt_client:subscribe({"test/2"})
 
     -- Continously invoke mqtt_client:handler() to process the MQTT protocol and
     -- handle any received messages.  Also, publish a message on topic "test/1"
 
-      running = true
+    running = true
 
-      while (running) do
-        mqtt_client:handler()
-        mqtt_client:publish("test/1", "test message")
-        socket.sleep(1.0)  -- seconds
-      end
+    while (running) do
+      mqtt_client:handler()
+      mqtt_client:publish("test/1", "test message")
+      socket.sleep(1.0)  -- seconds
+    end
 
     -- Clean-up by unsubscribing from the topic and closing the MQTT connection
 
-      mqtt_client:unsubscribe({"test/2"})
-      mqtt_client:destroy()
+    mqtt_client:unsubscribe({"test/2"})
+    mqtt_client:destroy()
 
 There are also a number of Lua MQTT client examples in the _example/_ directory.
 They can be run from the _lua/_ parent directory, as follow ...
 
-      cd mqtt_client/lua
-      example/example_00.lua
+    cd mqtt_client/paho
+    example/example_00.lua
 
 <a name="api" />
 MQTT client Library API
@@ -230,89 +230,89 @@ unsubscribe from one or more topics and disconnect from the MQTT server.
 
 Use the Lua _require_ statement to load the MQTT client library ...
 
-      MQTT = require("mqtt_library")
+    local MQTT = require 'paho.mqtt'
 
 #### MQTT.Utility.set_debug(): Library debug console logging
 
 The following statement enables debug console logging for diagnosis.
 
-      MQTT.Utility.set_debug(true)
+    MQTT.Utility.set_debug(true)
 
 #### MQTT.client.create(): Create an MQTT client instance
 
 Create an MQTT client that will be connected to the specified host.
 
-      mqtt_client = MQTT.client.create(hostname, port, callback)
+    mqtt_client = MQTT.client.create(hostname, port, callback)
 
 The _hostname_ must be provided, but both the _port_ and _callback function_
 parameters are optional.  This function returns an MQTT client instance
 that must be used for all subsequent MQTT operations for that server connection.
 
-      hostname string:   Host name or address of the MQTT broker
-      port     integer:  Port number of the MQTT broker (default: 1883)
-      callback function: Invoked when subscribed topic messages received
+    hostname string:   Host name or address of the MQTT broker
+    port     integer:  Port number of the MQTT broker (default: 1883)
+    callback function: Invoked when subscribed topic messages received
 
 The _callback function_ is defined as follows ...
 
-      function callback(topic, payload)
+    function callback(topic, payload)
       -- application specific code
-      end
+    end
 
-      topic   -- string: Topic for the received message
-      payload -- string: Message data
+    topic   -- string: Topic for the received message
+    payload -- string: Message data
 
 #### MQTT.client:destroy(): Destroy an MQTT client instance
 
 When finished with a server connection, this statement cleans-up all resources
 allocated by the client.
 
-      mqtt_client:destroy()
+    mqtt_client:destroy()
 
 #### MQTT.client:connect(): Make a connection to an MQTT server
 
 Before messages can be transmitted, the MQTT client must connect to the server.
 
-      mqtt_client:connect(identifier)
+    mqtt_client:connect(identifier)
 
 Each individual client connection must use a unique identifier.
 Only the _identifier_ parameter is required, the remaining parameters
 are optional.
 
-      mqtt_client:connect(identifier, will_topic, will_qos, will_retain, will_message)
+    mqtt_client:connect(identifier, will_topic, will_qos, will_retain, will_message)
 
 MQTT also provides a "last will and testament" for clients, which is a message
 automatically sent by the server on behalf of the client, should the connection
 fail.
 
-      identifier   -- string: MQTT client identifier (maximum 23 characters)
-      will_topic   -- string: Last will and testament topic
-      will_qos     -- byte:   Last will and testament Quality Of Service
-      will_retain  -- byte:   Last will and testament retention status
-      will_message -- string: Last will and testament message
+    identifier   -- string: MQTT client identifier (maximum 23 characters)
+    will_topic   -- string: Last will and testament topic
+    will_qos     -- byte:   Last will and testament Quality Of Service
+    will_retain  -- byte:   Last will and testament retention status
+    will_message -- string: Last will and testament message
 
 #### MQTT.client:disconnect(): Transmit MQTT Disconnect message
 
 Transmit an MQTT disconnect message to the server.
 
-      mqtt_client:disconnect()
+    mqtt_client:disconnect()
 
 #### MQTT.client:publish(): Transmit MQTT publish message
 
 Transmit a message on a specified topic.
 
-      mqtt_client:publish(topic, payload)
+    mqtt_client:publish(topic, payload)
 
-      topic   -- string: Topic for the published message
-      payload -- string: Message data
+    topic   -- string: Topic for the published message
+    payload -- string: Message data
 
 #### MQTT.client:subscribe(): Transmit MQTT Subscribe message
 
 Subscribe to one or more topics.  Whenever a message is published to one of
 those topics, the callback function (defined above) will be invoked.
 
-      mqtt_client:subscribe(topics)
+    mqtt_client:subscribe(topics)
 
-      topics -- table of strings, e.g. { "topic1", "topic2" }
+    topics -- table of strings, e.g. { "topic1", "topic2" }
 
 #### MQTT.client:handler(): Handle received messages, maintain keep-alive messages
 
@@ -338,6 +338,7 @@ topics are no longer received.
 <a name="problems" />
 Known problems
 --------------
+
 - Occasional "MQTT.client:handler(): Message length mismatch" errors,
   particularly when subscribed topics are transmitting many messages.
 

@@ -55,7 +55,7 @@ args = lapp [[
   -t,--topic_p  (default test/2)      Publish topic
 ]]
 
-local MQTT = require("mqtt_library")
+local MQTT = require "paho.mqtt"
 
 local mqtt_client1 = MQTT.client.create(args.host_s, args.port_s, callback)
 local mqtt_client2 = MQTT.client.create(args.host_p, args.port_p)

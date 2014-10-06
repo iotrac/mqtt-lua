@@ -1,7 +1,7 @@
 ---
 -- @module mqtt_library
 -- ~~~~~~~~~~~~~~~~
--- Version: 0.2 2012-06-01
+-- Version: 0.3 2014-10-06
 -- -------------------------------------------------------------------------- --
 -- Copyright (c) 2011-2012 Geekscape Pty. Ltd.
 -- All rights reserved. This program and the accompanying materials
@@ -10,7 +10,8 @@
 -- http://www.eclipse.org/legal/epl-v10.html
 --
 -- Contributors:
---    Andy Gelme - Initial API and implementation
+--    Andy Gelme    - Initial API and implementation
+--    Kevin KIN-FOO - Authentication and rockspec
 -- -------------------------------------------------------------------------- --
 --
 -- Documentation

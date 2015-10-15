@@ -1,8 +1,10 @@
-Lua MQTT client library (version 0.2 2012-06-01)
-=======================
+Lua MQTT v.3.1.1 client library (version 0.3 2015-10-15)
+-------
 
-This project is part of the
+This project is a fork of
 [Eclipse Paho project](http://eclipse.org/paho)
+
+This README file is outdated for this project and will be updated soon.
 
 Contents
 --------
@@ -16,7 +18,7 @@ Contents
 - [Library API](#api)
 - [Known problems](#problems)
 
-<a name="introduction" />
+
 Introduction
 ------------
 This project provides a client-side (only) implementation of the

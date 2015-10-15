@@ -1,4 +1,4 @@
-#!/usr/bin/lua
+#!/usr/local/bin/lua
 --
 -- mqtt_publish.lua
 -- ~~~~~~~~~~~~~~~~
@@ -53,7 +53,7 @@ local args = lapp [[
   -w,--will_topic    (default .)            Last will and testament topic
 ]]
 
-local MQTT = require "paho.mqtt"
+local MQTT = require "mqtt"
 
 if (args.debug) then MQTT.Utility.set_debug(true) end
 

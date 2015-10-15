@@ -1,4 +1,4 @@
-#!/usr/bin/lua
+#!/usr/local/bin/lua
 --
 -- example_01.lua
 -- ~~~~~~~~~~~~~~
@@ -41,7 +41,7 @@ end
 
 -- ------------------------------------------------------------------------- --
 
-if (not is_openwrt()) then require("luarocks.require") end
+-- if (not is_openwrt()) then require("luarocks.require") end
 local lapp = require("pl.lapp")
 
 args = lapp [[
@@ -55,7 +55,7 @@ args = lapp [[
   -t,--topic_p  (default test/2)      Publish topic
 ]]
 
-local MQTT = require "paho.mqtt"
+local MQTT = require "mqtt"
 
 local mqtt_client1 = MQTT.client.create(args.host_s, args.port_s, callback)
 local mqtt_client2 = MQTT.client.create(args.host_p, args.port_p)

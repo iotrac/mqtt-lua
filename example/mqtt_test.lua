@@ -1,4 +1,4 @@
-#!/usr/bin/lua
+#!/usr/local/bin/lua
 --
 -- mqtt_test.lua
 -- ~~~~~~~~~~~~~
@@ -29,6 +29,8 @@
 -- - On failure, automatically reconnect to MQTT server.
 -- ------------------------------------------------------------------------- --
 
+package.path = package.path .. ";../paho/?.lua"
+
 function callback(
   topic,    -- string
   payload)  -- string
@@ -48,7 +50,7 @@ end
 
 print("[mqtt_test v0.2 2012-06-01]")
 
-if (not is_openwrt()) then require("luarocks.require") end
+-- if (not is_openwrt()) then require("luarocks.require") end
 local lapp = require("pl.lapp")
 
 local args = lapp [[
@@ -61,13 +63,19 @@ local args = lapp [[
   <host>        (default localhost)  MQTT server hostname
 ]]
 
-local MQTT = require "paho.mqtt"
+local MQTT = require "mqtt"
+local socket = require "socket"
 
 if (args.debug) then MQTT.Utility.set_debug(true) end
 
 local mqtt_client = MQTT.client.create(args.host, args.port, callback)
-
+	mqtt_client.auth(mqtt_client,"HAKAN", "ABCDE")
 mqtt_client:connect(args.id)
+    socket.sleep(3.0)  -- seconds
+  error_message = mqtt_client:handler()
+  error_message = mqtt_client:handler()
+  error_message = mqtt_client:handler()
+  error_message = mqtt_client:handler()
 
 mqtt_client:publish(args.topic_p, "*** Lua test start ***")
 mqtt_client:subscribe({ args.topic_s })

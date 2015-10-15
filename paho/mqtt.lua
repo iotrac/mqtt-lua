@@ -478,8 +478,9 @@ end
 -- bytes m- : Optional variable header and payload
 
 function MQTT.client:message_write(   -- Internal API
-message_type,  -- enumeration
-payload)       -- string
+	message_type,  -- enumeration
+	payload,
+	retain)       -- string
 	-- return: nil or error message
 
 	-- TODO: Complete implementation of fixed header byte 1
@@ -489,6 +490,10 @@ payload)       -- string
 	--HAKAN:[3.8.1] Byte 1 must be 0x82
 	if(message_type == MQTT.SUBSCRIBE)   then
 		message = string.char( MQTT.Utility.shift_left(message_type, 4) + 2)
+	end
+	
+	if(message_type == MQTT.PUBLISH and retain == true)   then
+		message = string.char( MQTT.Utility.shift_left(message_type, 4) + 1)
 	end
 
 	if (payload == nil) then
@@ -776,7 +781,7 @@ end
 
 --- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
 -- Transmit MQTT Publish message.
--- MQTT 3.1 Specification: Section 3.3: Publish message
+-- MQTT 3.1.1 Specification: Section 3.3: Publish message
 --
 -- * bytes 1,2: Fixed message header, see MQTT.client:message_write()
 --            Variable header ..
@@ -788,8 +793,9 @@ end
 -- @function [parent = #client] publish
 --
 function MQTT.client:publish(                                     -- Public API
-topic,    -- string
-payload)  -- string
+			topic,  		
+			payload,	-- string
+			retain)     -- boolean
 
 	if (self.connected == false) then
 		error("MQTT.client:publish(): Not connected")
@@ -799,7 +805,7 @@ payload)  -- string
 
 	local message = MQTT.client.encode_utf8(topic) .. payload
 
-	self:message_write(MQTT.PUBLISH, message)
+	self:message_write(MQTT.PUBLISH, message, retain)
 end
 
 --- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
@@ -815,7 +821,7 @@ end
 -- @function [parent = #client] subscribe
 --
 function MQTT.client:subscribe(                                   -- Public API
-topics)  -- table of strings
+		topics)  -- table of strings
 
 	if (self.connected == false) then
 		error("MQTT.client:subscribe(): Not connected")

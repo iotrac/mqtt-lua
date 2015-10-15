@@ -85,12 +85,15 @@ mqtt_client:publish(args.topic_p, "*** Lua test start ***")
 mqtt_client:subscribe({ args.topic_s })
 
 local error_message = nil
+local counter = 0
 
 while (error_message == nil and running) do
   error_message = mqtt_client:handler()
 
   if (error_message == nil) then
-    mqtt_client:publish(args.topic_p, "*** Lua test message ***")
+    mqtt_client:publish(args.topic_p, "*** Lua test message: "..counter, true)
+	
+	counter = counter + 1
     socket.sleep(1.0)  -- seconds
   end
 end

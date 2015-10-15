@@ -2,7 +2,7 @@
 --
 -- mqtt_test.lua
 -- ~~~~~~~~~~~~~
--- Version: 0.2 2012-06-01
+-- Version: 0.3 2015-10-15
 -- ------------------------------------------------------------------------- --
 -- Copyright (c) 2011-2012 Geekscape Pty. Ltd.
 -- All rights reserved. This program and the accompanying materials
@@ -35,6 +35,8 @@ local MQTT = require "mqtt"
 local socket = require "socket"
 local lapp = require("pl.lapp")
 
+local version = "0.3 2015-10-15"
+
 -- ------------------------------------------------------------------------- --
 function is_openwrt()
   return(os.getenv("USER") == "root")  -- Assume logged in as "root" on OpenWRT
@@ -43,19 +45,18 @@ end
 -- ------------------------------------------------------------------------- --
 
 
-
 function callback(
   topic,    -- string
   payload)  -- string
 
   print("mqtt_test:callback(): " .. topic .. ": " .. payload)
 
-  if (payload == "quit") then running = false end
+  if payload == "quit" then running = false end
 end
 
 ------------------------------------------------------------------- --
 
-print("[mqtt_test v0.2 2012-06-01]")
+print("mqtt_test (v." .. version .. ")")
 
 local args = lapp [[
   Test Lua MQTT client library
@@ -71,19 +72,22 @@ local args = lapp [[
 if (args.debug) then MQTT.Utility.set_debug(true) end
 
 local mqtt_client = MQTT.client.create(args.host, args.port, callback)
-	mqtt_client.auth(mqtt_client)
+running = true
+	
+mqtt_client.auth(mqtt_client, "user", "passwd")
 mqtt_client:connect(args.id)
-    socket.sleep(3.0)  -- seconds
-  error_message = mqtt_client:handler()
-  error_message = mqtt_client:handler()
-  error_message = mqtt_client:handler()
-  error_message = mqtt_client:handler()
+
+socket.sleep(3.0)  -- seconds
+
+error_message = mqtt_client:handler()
+-- error_message = mqtt_client:handler()
+-- error_message = mqtt_client:handler()
+-- error_message = mqtt_client:handler()
 
 mqtt_client:publish(args.topic_p, "*** Lua test start ***")
 mqtt_client:subscribe({ args.topic_s })
 
 local error_message = nil
-local running = true
 
 while (error_message == nil and running) do
   error_message = mqtt_client:handler()

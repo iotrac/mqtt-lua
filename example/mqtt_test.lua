@@ -29,7 +29,7 @@
 -- - On failure, automatically reconnect to MQTT server.
 -- ------------------------------------------------------------------------- --
 
-package.path = package.path .. ";../paho/?.lua"
+package.path = package.path .. ";../paho/?.lua;paho/?.lua"
 
 local MQTT = require "mqtt"
 local socket = require "socket"
@@ -71,7 +71,7 @@ local args = lapp [[
 if (args.debug) then MQTT.Utility.set_debug(true) end
 
 local mqtt_client = MQTT.client.create(args.host, args.port, callback)
-	mqtt_client.auth(mqtt_client,"HAKAN", "ABCDE")
+	mqtt_client.auth(mqtt_client)
 mqtt_client:connect(args.id)
     socket.sleep(3.0)  -- seconds
   error_message = mqtt_client:handler()

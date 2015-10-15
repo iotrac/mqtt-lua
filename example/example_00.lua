@@ -30,7 +30,7 @@
 -- - Error handling: MQTT.client.unsubscribe()
 -- ------------------------------------------------------------------------- --
 
-package.path = package.path .. ";../paho/?.lua"
+package.path = package.path .. ";../paho/?.lua;paho/?.lua"
 
 local MQTT = require "mqtt"
 local socket = require "socket"

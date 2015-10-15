@@ -27,17 +27,20 @@
 -- ~~~~
 -- None, yet.
 -- ------------------------------------------------------------------------- --
+package.path = package.path .. ";../paho/?.lua"
+
+local MQTT = require "mqtt"
+local socket = require "socket"
+local lapp = require("pl.lapp")
 
 function is_openwrt()
   return(os.getenv("USER") == "root")  -- Assume logged in as "root" on OpenWRT
 end
-
+-- if (not is_openwrt()) then require("luarocks.require") end
 -- ------------------------------------------------------------------------- --
 
 print("[mqtt_publish v0.2 2012-06-01]")
 
-if (not is_openwrt()) then require("luarocks.require") end
-local lapp = require("pl.lapp")
 
 local args = lapp [[
   Publish a message to a specified MQTT topic
@@ -53,7 +56,7 @@ local args = lapp [[
   -w,--will_topic    (default .)            Last will and testament topic
 ]]
 
-local MQTT = require "mqtt"
+
 
 if (args.debug) then MQTT.Utility.set_debug(true) end
 

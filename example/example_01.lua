@@ -24,25 +24,19 @@
 -- - On failure, automatically reconnect to MQTT server(s).
 -- ------------------------------------------------------------------------- --
 
-function callback(
-  topic,    -- string
-  message)  -- string
+package.path = package.path .. ";../paho/?.lua"
 
-  print("Topic: " .. topic .. ", message: '" .. message .. "'")
-
-  mqtt_client2:publish(args.topic_p, message)
-end
-
--- ------------------------------------------------------------------------- --
+local MQTT = require "mqtt"
+local socket = require "socket"
+local lapp = require("pl.lapp")
 
 function is_openwrt()
   return(os.getenv("USER") == "root")  -- Assume logged in as "root" on OpenWRT
 end
-
+-- if (not is_openwrt()) then require("luarocks.require") end
 -- ------------------------------------------------------------------------- --
 
--- if (not is_openwrt()) then require("luarocks.require") end
-local lapp = require("pl.lapp")
+print("[example_01 v0.1]")
 
 args = lapp [[
   Subscribe to topic_s and publish all messages on topic_p
@@ -55,7 +49,6 @@ args = lapp [[
   -t,--topic_p  (default test/2)      Publish topic
 ]]
 
-local MQTT = require "mqtt"
 
 local mqtt_client1 = MQTT.client.create(args.host_s, args.port_s, callback)
 local mqtt_client2 = MQTT.client.create(args.host_p, args.port_p)

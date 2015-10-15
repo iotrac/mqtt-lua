@@ -22,6 +22,7 @@
 -- ~~~~
 -- - shift_left() should mask bits past the 8, 16, 32 and 64-bit boundaries.
 -- ------------------------------------------------------------------------- --
+local socket = require("socket")
 
 local function isPsp() return(Socket ~= nil) end
 
@@ -29,7 +30,7 @@ if (isPsp()) then socket = Socket end                        -- Compatibility !
 
 -- ------------------------------------------------------------------------- --
 
-local debug_flag = false
+local debug_flag = true
 
 local function set_debug(value) debug_flag = value end
 

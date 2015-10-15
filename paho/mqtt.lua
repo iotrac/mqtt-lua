@@ -391,7 +391,7 @@ function MQTT.client:handler()
 
 	-- Transmit MQTT PING message
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~
-	-- MQTT 3.1 Specification: Section 3.13: PING request
+	-- MQTT 3.1.1 Specification: Section 3.12: PING request
 	--
 	-- bytes 1,2: Fixed message header, see MQTT.client:message_write()
 

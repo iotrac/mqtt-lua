@@ -44,6 +44,7 @@ end
 -- if (not is_openwrt()) then require("luarocks.require") end
 -- ------------------------------------------------------------------------- --
 
+local running = true
 
 function callback(
   topic,    -- string
@@ -72,7 +73,6 @@ local args = lapp [[
 if (args.debug) then MQTT.Utility.set_debug(true) end
 
 local mqtt_client = MQTT.client.create(args.host, args.port, callback)
-running = true
 	
 mqtt_client.auth(mqtt_client, "user", "passwd")
 mqtt_client:connect(args.id)
@@ -80,9 +80,6 @@ mqtt_client:connect(args.id)
 socket.sleep(3.0)  -- seconds
 
 error_message = mqtt_client:handler()
--- error_message = mqtt_client:handler()
--- error_message = mqtt_client:handler()
--- error_message = mqtt_client:handler()
 
 mqtt_client:publish(args.topic_p, "*** Lua test start ***")
 mqtt_client:subscribe({ args.topic_s })

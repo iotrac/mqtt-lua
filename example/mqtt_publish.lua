@@ -49,17 +49,18 @@ local args = lapp [[
   -i,--id            (default mqtt_pub)     MQTT client identifier
   -m,--message       (string)               Message to be published
   -p,--port          (default 1883)         MQTT server port number
-  -t,--topic         (string)               Topic on which to publish
+  -t,--topic         (string)               Topic on which to publish.
+  -r,--retain                               Retain the message
   -w,--will_message  (default .)            Last will and testament message
   -w,--will_qos      (default 0)            Last will and testament QOS
   -w,--will_retain   (default 0)            Last will and testament retention
   -w,--will_topic    (default .)            Last will and testament topic
 ]]
 
-
+local retain = false
 
 if (args.debug) then MQTT.Utility.set_debug(true) end
-
+if args.retain then retain=true end
 local mqtt_client = MQTT.client.create(args.host, args.port)
 
 if (args.will_message == "."  or  args.will_topic == ".") then
@@ -69,8 +70,8 @@ else
     args.id, args.will_topic, args.will_qos, args.will_retain, args.will_message
   )
 end
-
-mqtt_client:publish(args.topic, args.message)
+print(args.retain)
+mqtt_client:publish(args.topic, args.message, retain)
 
 mqtt_client:destroy()
 

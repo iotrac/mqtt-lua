@@ -20,7 +20,7 @@
 --
 -- ToDo
 -- ~~~~
--- - shift_left() should mask bits past the 8, 16, 32 and 64-bit boundaries.
+-- - shift_left() should mask bits past the 8, 16, 32 and 64-bit boundaries. -- TODO: What does this mean?
 -- ------------------------------------------------------------------------- --
 local socket = require("socket")
 
@@ -113,13 +113,16 @@ local function socket_receive(socket_client, byte_count)
   return(error_message), (buffer)                            -- nil or "closed"
 end
 
+--[[ TODO: Write doc for what this is for. Seems to be doing conflicting things 
+  for psp it is just spinning. Also socket does not have isConnected() function from the docs
+--]]
 local function socket_wait_connected(socket_client)
   if (isPsp()) then
     while (socket_client:isConnected() == false) do
       System.sleep(100)
     end
   else
-    socket_client:settimeout(0.001)     -- So that socket.recieve doesn't block
+    socket_client:settimeout(0.01)     -- So that socket.recieve doesn't block
   end
 end
 

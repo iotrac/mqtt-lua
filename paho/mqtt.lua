@@ -79,8 +79,6 @@ local MQTT = {}
 
 local pathOfThisFile = ...
 local folderOfThisFile = (...):match("(.-)[^%.]+$")
-print("Path of this file:" .. pathOfThisFile)
-print("Folder of this file:" .. folderOfThisFile)
 -- Thanks to http://stackoverflow.com/questions/9145432/load-lua-files-by-relative-path
 
 ---
@@ -92,7 +90,7 @@ MQTT.Utility = require(folderOfThisFile .. 'utility')
 ---
 -- @field [parent = #mqtt_library] #number VERSION
 --
-MQTT.VERSION = 0x04
+MQTT.VERSION = 0x05
 
 ---
 -- @field [parent = #mqtt_library] #boolean ERROR_TERMINATE
@@ -122,8 +120,9 @@ MQTT.client.DEFAULT_PORT       = 1883
 ---
 -- @field [parent = #client] #number KEEP_ALIVE_TIME
 --
-MQTT.client.KEEP_ALIVE_TIME    =   60  -- seconds (maximum is 65535)
-
+MQTT.client.KEEP_ALIVE_TIME       =   60  -- seconds (maximum is 65535)
+MQTT.client.CONNACK_WAIT_TIMEOUT  = 3  -- seconds [MQTT-3.2: "Reasonable" time]
+MQTT.client.CLIENT_SOCKET_TIMEOUT = 0.01
 ---
 -- @field [parent = #client] #number MAX_PAYLOAD_LENGTH
 --
@@ -150,22 +149,21 @@ MQTT.PINGRESP    = 0x0D
 MQTT.DISCONNECT  = 0x0E
 MQTT.RESERVED_FF  = 0xFF  --Forbidden
 
--- MQTT 3.1.1 Specification: Section 3.2: CONNACK acknowledge connection errors
-
+-- MQTT 3.1.1 Specification: Section 3.2: CONNACK return error messages.
+-- CONNACK return code 0x0 -> Connection Accepted. Others are errors.
 MQTT.error_message = {}
 MQTT.error_message.CONNACK = {          -- CONNACK return code used as the index
-  "Unacceptable protocol version",
-  "Identifer rejected",
-  "Server unavailable",
-  "Bad user name or password",
-  "Not authorized"
---"Invalid will topic"                 -- Proposed
+  "Connection refused, unacceptable protocol version",        -- 0x01
+  "Connection refused, identifer rejected",                   -- 0x02
+  "Connection refused, server unavailable",                   -- 0x03
+  "Connection refused, bad user name or password",            -- 0x04
+  "Connection refused, client is not authorized to connect"   -- 0x05
+  -- 6-255: Reserved for future use
 }
 
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
 -- Create an MQTT client instance
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 ---
 -- Create an MQTT client instance.
 -- @param #string hostname Host name or address of the MQTT broker
@@ -188,12 +186,12 @@ function MQTT.client.create(                                      -- Public API
   mqtt_client.hostname = hostname or MQTT.DEFAULT_BROKER_HOSTNAME
   mqtt_client.port     = port or MQTT.client.DEFAULT_PORT
 
-  mqtt_client.connected     = false
-  mqtt_client.destroyed     = false
-  mqtt_client.last_activity = 0
-  mqtt_client.message_id    = 0
-  mqtt_client.outstanding   = {}
-  mqtt_client.socket_client = nil
+  mqtt_client.connected         = false
+  mqtt_client.destroyed         = false
+  mqtt_client.last_activity     = 0
+  mqtt_client.message_id        = 0
+  mqtt_client.outstanding       = {}
+  mqtt_client.socket_client     = nil
 
   return(mqtt_client)
 end
@@ -249,6 +247,7 @@ function MQTT.client:connect(                                     -- Public API
   -- return: nil or error message
 
   if (self.connected) then
+    -- TODO: Should this be an idempotent operation ?
     return("MQTT.client:connect(): Already connected")
   end
 
@@ -257,13 +256,15 @@ function MQTT.client:connect(                                     -- Public API
   self.socket_client = socket.connect(self.hostname, self.port)
 
   if (self.socket_client == nil) then
+    MQTT.Utility.debug("MQTT.client:connect(): Couldn't open MQTT broker connection")
     return("MQTT.client:connect(): Couldn't open MQTT broker connection")
   end
 
   -- Set a timeout value for subsequent operations
-  MQTT.Utility.socket_wait_connected(self.socket_client)
+  MQTT.Utility.socket_wait_connected(self.socket_client, MQTT.client.CLIENT_SOCKET_TIMEOUT)
 
-  self.connected = true
+  -- Not yet connected. Only after CONNACK is received without errors.
+  self.connected = false
 
   -- Construct CONNECT variable header fields (bytes 1 through 7)
   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -326,9 +327,73 @@ function MQTT.client:connect(                                     -- Public API
     end
   end
 
-  -- Send MQTT message
-  -- ~~~~~~~~~~~~~~~~~
-  return(self:message_write(MQTT.CONNECT, payload))
+  -- Send CONNECT message
+  local send_connect_result = self:message_write(MQTT.CONNECT, payload)
+  if(send_connect_result ~= nil) then
+    return("MQTT.client:connect(): Could not send CONNECT request: ".. send_result)
+  end
+
+  -- Now waiting for CONNACK message from the broker.
+  -- Only after receiving a valid CONNACK message, self.connected will be true.
+  local connack_result = self:wait_for_connack(MQTT.client.CONNACK_WAIT_TIMEOUT)
+  if (connack_result == nil)  then
+    self.connected = true
+    MQTT.Utility.debug("MQTT.client:connect() - Successful")
+  else  -- Deal with error here.
+    MQTT.Utility.debug("MQTT.client:connect() - ".. connack_result)
+    self:destroy()
+  end
+
+  return(connack_result)
+end
+
+-------------------------------------------------
+-- Wait for CONNACK response from broker after a CONNECT request is sent.
+-- This should be the first message received from the broker.
+--
+-- @param timeout maximum time to wait for a  CONNACK response as per [MQTT-3.2]
+-- -- @function [parent = #client] wait_for_connack
+--
+function MQTT.client:wait_for_connack(  -- Internal API
+  timeout)
+  -- return: nil or error message
+
+  local connack_received = false
+  local error_message = nil
+
+  local socket_ready = MQTT.Utility.socket_ready(self.socket_client, timeout)
+
+  if (not socket_ready) then
+      -- After <timeout> seconds, assume CONNACK msg is not coming and give up. 
+      error_message = "Socket is not ready"
+  else
+    error_message, buffer = MQTT.Utility.socket_receive(self.socket_client)
+    if (error_message == nil) then
+      if (buffer ~= nil and #buffer > 0) then
+        local message_type_flags = string.byte(buffer, 1)
+        local message_type = MQTT.Utility.shift_right(message_type_flags, 4)
+
+        if(message_type == MQTT.CONNACK) then
+          -- Verify no CONNACK error is returned from broker
+          local remaining_length = string.byte(buffer, 2)
+          assert(remaining_length==2, "CONNACK:remaining_length must be 2!. It was: "..remaining_length )
+          
+          -- local byte3 = string.byte(buffer, 3)  -- Only SP bit is relevant
+
+          local connect_return_code = string.byte(buffer, 4)
+          if (connnect_return_code ~= 0) then
+            error_message = MQTT.error_message.CONNACK[connect_return_code]
+            MQTT.Utility.debug("MQTT.client:wait_for_connack() - "..error_message)
+          end
+        else    -- message_type != CONNACK
+          -- We must have gotten a CONNACK and nothing ese at this point
+          error_message = "Unexpected message type while waiting for CONNACK"
+        end
+      end
+    end
+  end
+
+  return error_message
 end
 
 --- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
@@ -336,7 +401,7 @@ end
 -- @param self
 -- @function [parent = #client] destroy
 --
-function MQTT.client:destroy()                                    -- Public API
+function MQTT.client:destroy()              -- Public API
   MQTT.Utility.debug("MQTT.client:destroy()")
 
   if (self.destroyed == false) then
@@ -422,8 +487,7 @@ function MQTT.client:handler()
   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   local ready = MQTT.Utility.socket_ready(self.socket_client)
   if (ready) then
-    local error_message, buffer =
-      MQTT.Utility.socket_receive(self.socket_client)
+    local error_message, buffer = MQTT.Utility.socket_receive(self.socket_client)
 
     if (error_message ~= nil) then
       self:destroy()

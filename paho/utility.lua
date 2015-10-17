@@ -84,12 +84,13 @@ end
 
 -- ------------------------------------------------------------------------- --
 
-local function socket_ready(socket_client)
+local function socket_ready(socket_client, timeout)
   local ready, read_sockets, write_sockets, error_state = true, nil, nil, nil
 
+  local stimeout = timeout or 0.001
   if (not isPsp()) then
     read_sockets, write_sockets, error_state =
-      socket.select({socket_client}, nil, 0.001)
+      socket.select({socket_client}, nil, stimeout)
 
     if (#read_sockets == 0) then ready = false end
   end
@@ -98,31 +99,40 @@ local function socket_ready(socket_client)
 end
 
 local function socket_receive(socket_client, byte_count)
-  local response, buffer, error_message = nil, nil, nil
-
-  byte_count = byte_count or 128                                     -- default
-
+  local response, error_message, partial_buffer = nil, nil, nil
+  local result_buffer = nil
+  
   if (isPsp()) then
+    byte_count = byte_count or 128   -- default  
     buffer = socket_client:recv(byte_count)
   else
-    response, error_message, buffer = socket_client:receive("*a")
-
-    if (error_message == "timeout") then error_message = nil end
+    response, error_message, partial_buffer = socket_client:receive("*a")
+    
+    if response == nil then  --either error or partial response
+      -- error_message-> "closed" | "timeout"
+      if error_message == "timeout" then error_message = nil end
+      result_buffer = partial_buffer
+    else
+      result_buffer = response
+    end
   end
-
-  return(error_message), (buffer)                            -- nil or "closed"
+  -- error_message -> nil | "closed"
+  return(error_message), (result_buffer)  
 end
 
---[[ TODO: Write doc for what this is for. Seems to be doing conflicting things 
-  for psp it is just spinning. Also socket does not have isConnected() function from the docs
+
+--[[ 
+  TODO: Write doc for what this is for. Seems to be doing conflicting things 
+  for psp it is just spinning. 
+  Also socket does not have isConnected() function from the docs. Maybe there is for psp
 --]]
-local function socket_wait_connected(socket_client)
+local function socket_wait_connected(socket_client, timeout)
   if (isPsp()) then
     while (socket_client:isConnected() == false) do
       System.sleep(100)
     end
   else
-    socket_client:settimeout(0.01)     -- So that socket.recieve doesn't block
+    socket_client:settimeout(timeout or 0.01)     -- So that socket.recieve doesn't block
   end
 end
 

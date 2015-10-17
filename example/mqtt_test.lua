@@ -72,19 +72,21 @@ local args = lapp [[
 
 if (args.debug) then MQTT.Utility.set_debug(true) end
 
+local error_message = nil
+
 local mqtt_client = MQTT.client.create(args.host, args.port, callback)
 	
 mqtt_client.auth(mqtt_client, "user", "passwd")
-mqtt_client:connect(args.id)
+error_message = mqtt_client:connect("mqtt-test")
+if error_message ~= nil then error(error_message) end
 
-socket.sleep(3.0)  -- seconds
+socket.sleep(2.0)  -- seconds
 
 error_message = mqtt_client:handler()
 
 mqtt_client:publish(args.topic_p, "*** Lua test start ***")
 mqtt_client:subscribe({ args.topic_s })
 
-local error_message = nil
 local counter = 0
 
 while (error_message == nil and running) do

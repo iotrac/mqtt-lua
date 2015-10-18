@@ -1,8 +1,8 @@
-Lua MQTT v.3.1.1 client library (version 0.3 2015-10-15)
+MQTT-v3.1.1 client library in Lua
 -------
 
 This project is a fork of
-[Eclipse Paho project](http://eclipse.org/paho)
+[Eclipse Paho project](http://eclipse.org/paho) Lua library.
 
 This README file is outdated for this project and will be updated soon.
 
@@ -21,108 +21,67 @@ Contents
 
 Introduction
 ------------
-This project provides a client-side (only) implementation of the
-[MQTT protocol](http://mqtt.org),
-plus command-line utilities for publishing and subscribing to MQTT topics.
-Typically, one or more MQTT servers, such as
-[mosquitto](http://mosquitto.org) or
-[rsmb](http://www.alphaworks.ibm.com/tech/rsmb)
-will be running on host systems, with which the Lua MQTT client can interact.
+This project provides a partial client-side implementation of the [MQTT protocol](http://mqtt.org),
+plus command-line utilities for publishing and subscribing to MQTT topics. Typically, one or more MQTT servers (brokers), such as
+[mosquitto](http://mosquitto.org)  will be running on host systems, with which the Lua MQTT client can interact.
 
 MQTT stands for "Message Queue Telemetry Transport", a protocol authored by
 [Dr. Andy Stanford-Clark](http://wikipedia.org/wiki/Andy_Stanford-Clark)
-and Arlen Nipper.
-The protocol is a message-based, publish/subscribe transport layer,
-which is optimized for simple telemetry applications running on small
-micro-controllers, such as an [Arduino](http://arduino.cc),
-over low-bandwidth connections.
-[MQTT libraries exist](http://mqtt.org/software)
-for most popular programming languages, so you can utilize MQTT
+and Arlen Nipper. The protocol is a message-based, publish/subscribe transport layer, which is optimized 
+for simple telemetry applications running on small micro-controllers, such as an [Arduino](http://arduino.cc), [mbed](http:mbed.org)
+over possibly low-bandwidth connections.
+
+This library partially (for now) implements 
+[MQTT protocol specification v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf).
+The intention is to implement full specification in the near future as much as possible in the constraints of Lua langulage and embedded platforms.
+
+A good use-case for this library is running on constrained systems, such as [OpenWRT](http://openwrt.org),
+and acting as a gateway between non-MQTT clients and MQTT servers. An advantage of using Lua is that only a text editor is required for rapid
+development of simple MQTT client applications on platforms such as OpenWRT.
+
+[MQTT libraries exist](http://mqtt.org/software) for most popular programming languages, so you can utilize MQTT
 on whatever server or device that you require.
 
-The Lua MQTT client library implements the client-side subset of the
-[MQTT protocol specification 3.1](https://www.ibm.com/developerworks/webservices/library/ws-mqtt).
-
-![Lua MQTT overview](https://github.com/geekscape/mqtt_lua/raw/master/images/lua_mqtt_overview.jpg)
-
-A good use-case for this library is running on constrained systems, such as
-[OpenWRT](http://openwrt.org),
-and acting as a gateway between non-MQTT clients and MQTT servers.
-An advantage of using Lua is that only a text editor is required for rapid
-development of simple MQTT client applications on platforms such as OpenWRT.
-In constrast, working with the C programming language would comparatively
-require more effort, due to requiring a cross-platform development environment.
-
-The Lua MQTT client library also runs (unmodified) on a Sony PlayStation
-Portable using the
-[Lua Player HM](http://en.wikipedia.org/wiki/Lua_Player_HM)
-_(which requires your PSP to be able to run unsigned executables)._
-
-![PlayStation Portable](https://github.com/geekscape/mqtt_lua/raw/master/images/playstation_portable.jpg)
-
-<a name="restrictions" />
 Protocol implementation and restrictions
 ----------------------------------------
 - Always assumes MQTT connection "clean session" enabled.
-- Supports connection last will and testament message.
-- Does not support connection username and password.
-- Fixed message header byte 1, only implements the "message type".
 - Only supports QOS (Quality Of Service) level 0.
-- Maximum payload length is 127 bytes (easily increased).
+- Packet size of up to maximum specified in [MQTT-v.3.1.1] (2.2.3)
 - Publish message doesn't support "message identifier".
 - Subscribe acknowledgement messages don't check granted QOS level.
 - Outstanding subscribe acknowledgement messages aren't escalated.
 - Works on the Sony PlayStation Portable, using
   [Lua Player HM](http://en.wikipedia.org/wiki/Lua_Player_HM).
+  
+The Lua MQTT client library also runs (unmodified) on a Sony PlayStation Portable using the
+[Lua Player HM](http://en.wikipedia.org/wiki/Lua_Player_HM) _(which requires your PSP to be able to run unsigned executables)._  
+  
+Modules implemented in target platform affects how the library will be used. It may not be possible to add some modules to closed systems. 
+For example, Sierra Wireless Airlink LS300 3G gateway.  
 
-<a name="download" />
-Download
---------
-The Lua MQTT client library is cross-platform and should work on any
-platform that supports the Lua programming language and network sockets.
-
-- [Download Lua MQTT client library](https://github.com/geekscape/mqtt_lua/archives/master)
-
-<a name="feedback" />
-Feedback and issues
--------------------
-Tracking is managed via GitHub ...
-
-- [Enhancements requests and issue tracking](https://github.com/geekscape/mqtt_lua/issues)
-
-<a name="installation" />
 Installation
 ------------
-You may choose to install an MQTT server either on the same or a different
-system from the Lua MQTT client library, depending upon your deployment
-scenario.
 
 Prerequisites ...
 
-- Install [Mosquitto MQTT server](http://mosquitto.org/download)
-or any other MQTT server
 - Install [Lua programming language](http://www.lua.org/download.html)
 - Install [LuaRocks package manager](http://luarocks.org/en/Download)
 - Install [LuaSocket](http://w3.impa.br/~diego/software/luasocket)
-- Install [PenLight](https://github.com/stevedonovan/Penlight)
+- Install [PenLight](https://github.com/stevedonovan/Penlight) (For running example command line code)
 
 On Linux, Lua and LuaRocks can be installed via your Linux distribution
 package manager.
-On Mac OS X, Lua and LuaRocks can be installed viarDarwin ports.
+On Mac OS X, Lua and LuaRocks can be installed via Darwin ports.
+
 After that, LuaSocket and PenLight can be installed via LuaRocks.
 
-Lua MQTT client library (source code) from GitHub ...
-
-* TODO
-
-<a name="usage" />
 Usage
 -----
 The Lua MQTT client library comes with three command line utilites,
 which are useful for testing the library and acting as example code.
 These utilities require that Lua Penlight has been installed.
 
-#### mqtt\_test: Test publish and receive messages on different topics
+#### mqtt_test: Test publish and receive messages on different topics
 
 This command periodically publishes a message on topic "test/1" and
 subscribes to the topic "test/2".  The command exits when the message
@@ -136,11 +95,11 @@ subscribes to the topic "test/2".  The command exits when the message
       -p,--port   (default 1883)       MQTT server port number
       <host>      (default localhost)  MQTT server hostname
 
-#### mqtt\_publish: Publish a single message to a specified topic
+#### mqtt_publish: Publish a single message to a specified topic
 
-This command publishes a single message and then exits.
+This command publishes a single 'retained' message and then exits.
 
-      example/mqtt_publish -d -t test/1 -m "Test message"
+      example/mqtt_publish -d -t -r test/1 -m "Test message"
 
 Only the _--topic_ and _--message_ parameters are required.
 
@@ -150,12 +109,13 @@ Only the _--topic_ and _--message_ parameters are required.
       -m,--message      (string)               Message to be published
       -p,--port         (default 1883)         MQTT server port number
       -t,--topic        (string)               Topic on which to publish
+      -r,--retain                              Retain the message
       -w,--will_message                        Last will and testament message
       -w,--will_qos     (default 0)            Last will and testament QOS
       -w,--will_retain  (default 0)            Last will and testament retention
       -w,--will_topic                          Last will and testament topic
 
-#### mqtt\_subscribe: Subscribe to a topic
+#### mqtt_subscribe: Subscribe to a topic
 
 This command subscribes to a topic and listens indefinitely for messages.
 Use ^C (or similar) to stop execution.
@@ -175,44 +135,69 @@ Only the _--topic_ parameter is required.
       -w,--will_retain  (default 0)            Last will and testament retention
       -w,--will_topic                          Last will and testament topic
 
-<a name="example" />
+
 Example code
 ------------
 The complete functioning code can be viewed here ...
-[mqtt_lua/lua/example/mqtt\_test.lua](https://github.com/geekscape/mqtt_lua/blob/master/lua/example/mqtt_test.lua)
+[mqtt_lua/example/mqtt_test.lua](https://github.com/iotrac/mqtt-lua/blob/master/example/mqtt_test.lua)
 
+    local running = true
+    local counter = 0
+   
     -- Define a function which is called by mqtt_client:handler(),
     -- whenever messages are received on the subscribed topics
-
-    function callback(topic, message)
-      print("Received: " .. topic .. ": " .. message)
-      if (message == "quit") then running = false end
+    function callback(
+        topic,    -- string
+        payload)  -- string
+   
+        print("mqtt_test:callback(): " .. topic .. ": " .. payload)
+   
+        if payload == "quit" then running = false end
     end
+   
+    local args = lapp [[
+        Test Lua MQTT client library
+        -d,--debug                         Verbose console logging
+        -i,--id       (default mqtt_test)  MQTT client identifier
+        -p,--port     (default 1883)       MQTT server port number
+        -s,--topic_s  (default test/2)     Subscribe topic
+        -t,--topic_p  (default test/1)     Publish topic
+        <host>        (default localhost)  MQTT server hostname
+    ]]
+   
+    if (args.debug) then MQTT.Utility.set_debug(true) end
+   
+    local error_message = nil
 
-    -- Create an MQTT client instance, connect to the MQTT server and
-    -- subscribe to the topic called "test/2"
-
-    MQTT = require "paho.mqtt"
-    MQTT.Utility.set_debug(true)
-    mqtt_client = MQTT.client.create("localhost", nil, callback)
-    mqtt_client:connect("lua mqtt client"))
-    mqtt_client:subscribe({"test/2"})
-
-    -- Continously invoke mqtt_client:handler() to process the MQTT protocol and
-    -- handle any received messages.  Also, publish a message on topic "test/1"
-
-    running = true
-
-    while (running) do
-      mqtt_client:handler()
-      mqtt_client:publish("test/1", "test message")
-      socket.sleep(1.0)  -- seconds
+    local mqtt_client = MQTT.client.create(args.host, args.port, callback)
+   	
+    mqtt_client.auth(mqtt_client, "user", "passwd")
+    error_message = mqtt_client:connect("mqtt-test")
+    if error_message ~= nil then error(error_message) end
+   
+    error_message = mqtt_client:handler()
+   
+    mqtt_client:publish(args.topic_p, "*** Lua test start ***")
+    mqtt_client:subscribe({ args.topic_s })
+   
+    while (error_message == nil and running) do
+     error_message = mqtt_client:handler()
+   
+     if (error_message == nil) then
+       mqtt_client:publish(args.topic_p, "*** Lua test message: "..counter, true)
+   	
+    counter = counter + 1
+       socket.sleep(1.0)  -- seconds
+     end
     end
-
-    -- Clean-up by unsubscribing from the topic and closing the MQTT connection
-
-    mqtt_client:unsubscribe({"test/2"})
-    mqtt_client:destroy()
+   
+    -- An error happened or running == false due to a message to topic "test/2" with payload "quit"
+    if (error_message == nil) then
+     mqtt_client:unsubscribe({ args.topic_s })
+     mqtt_client:destroy()
+    else
+       print(error_message)
+    end
 
 There are also a number of Lua MQTT client examples in the _example/_ directory.
 They can be run from the _lua/_ parent directory, as follow ...
@@ -220,7 +205,7 @@ They can be run from the _lua/_ parent directory, as follow ...
     cd mqtt_client/paho
     example/example_00.lua
 
-<a name="api" />
+
 MQTT client Library API
 -----------------------
 Once the MQTT client library has been included (via _require_), one or more
@@ -302,10 +287,11 @@ Transmit an MQTT disconnect message to the server.
 
 Transmit a message on a specified topic.
 
-    mqtt_client:publish(topic, payload)
+    mqtt_client:publish(topic, payload, retain)
 
     topic   -- string: Topic for the published message
     payload -- string: Message data
+    retain  -- boolean: Whether to request the broker to retain this message
 
 #### MQTT.client:subscribe(): Transmit MQTT Subscribe message
 
@@ -337,7 +323,6 @@ topics are no longer received.
 
       topics -- table of strings, e.g. { "topic1", "topic2" }
 
-<a name="problems" />
 Known problems
 --------------
 

@@ -1,7 +1,7 @@
 ---
 -- @module mqtt_library
 -- ~~~~~~~~~~~~~~~~
--- Version: 0.4 2015-10-15
+-- Version: 0.4-SNAPSHOT
 -- -------------------------------------------------------------------------- --
 -- Copyright (c) 2011-2012 Geekscape Pty. Ltd.
 -- All rights reserved. This program and the accompanying materials
@@ -31,10 +31,7 @@
 -- Notes
 -- ~~~~~
 -- - Always assumes MQTT connection "clean session" enabled.
--- - Supports connection last will and testament message.
--- - Fixed message header byte 1, only implements the "message type".  -- TODO: Find out what this means
 -- - Only supports QOS level 0.
--- - Maximum payload length is 268,435,455 bytes (as per specification).
 -- - Publish message doesn't support "message identifier".
 -- - Subscribe acknowledgement messages don't check granted QOS level.
 -- - Outstanding subscribe acknowledgement messages aren't escalated.
@@ -48,11 +45,14 @@
 -- * When a PINGREQ is sent, must check for a PINGRESP, within KEEP_ALIVE_TIME..
 --   * Otherwise, fail the connection.
 -- * When connecting, wait for CONNACK, until KEEP_ALIVE_TIME, before failing.
--- * Should MQTT.client:connect() be asynchronous with a callback ?
+--      This fixed by: https://github.com/iotrac/mqtt-lua/commit/3c8776bb8b67e23fff8d3fd2908145ccb8afdfa2
+--      After CONNECT msg, wait for CONNACK until CONNACK_WAIT_TIMEOUT. KEEP_ALIVE_TIME is too long.
+-- 
 -- * Review all public APIs for asynchronous callback behaviour.
--- * Implement parse PUBACK message.
+-- * Implement parse PUBACK message. -- This should be: Implement QoS level 1.
+
 -- * Handle failed subscriptions, i.e no subscription acknowledgement received.
--- * Fix problem when KEEP_ALIVE_TIME is short, e.g. mqtt_publish -k 1
+
 --     MQTT.client:handler(): Message length mismatch
 -- - On socket error, optionally try reconnection to MQTT server.
 -- - Consider use of assert() and pcall() ?
@@ -60,11 +60,10 @@
 -- - Refactor "if self.connected()" to "self.checkConnected(error_message)".
 -- - Maintain and publish messaging statistics.
 -- - Memory heap/stack monitoring.
--- - When debugging, why isn't mosquitto sending back CONNACK error code ? -- It is sending. Socket is closed before then.
--- - Subscription callbacks invoked by topic name (including wildcards).
+-- - When debugging, why isn't mosquitto sending back CONNACK error code ? 
+--       Fixed by: https://github.com/iotrac/mqtt-lua/issues/3
+-- 
 -- - Implement asynchronous state machine, rather than single-thread waiting.
---   - After CONNECT, expect and wait for a CONNACK.
--- - Implement complete MQTT broker (server).
 -- - Consider using Copas http://keplerproject.github.com/copas/manual.html
 -- ------------------------------------------------------------------------- --
 
@@ -74,6 +73,8 @@ local socket = require("socket")
 -- require("io")
 -- require("ltn12")
 -- require("ssl")
+
+local version = "0.4-SNAPSHOT"
 
 local MQTT = {}
 
@@ -110,6 +111,7 @@ MQTT.DEFAULT_BROKER_HOSTNAME = "iot.eclipse.org"
 -- @field [parent = #mqtt_library] #client client
 --
 MQTT.client = {}
+
 MQTT.client.__index = MQTT.client
 
 ---
@@ -211,7 +213,7 @@ end
 --   2. username will be encoded as only two bytes of length 0 as per [MQTT 1.5.3]
 --   3. password bytes will contain '0,3,97,98,99'
 --
--- Remains to be seen if this behavir will be accepted by brokers.
+-- Remains to be seen if this behaviour will be accepted by brokers.
 --
 -- Usage example:
 --		local mqtt_client = MQTT.client.create(args.host, args.port, callback)
@@ -381,7 +383,7 @@ function MQTT.client:wait_for_connack(  -- Internal API
           -- local byte3 = string.byte(buffer, 3)  -- Only SP bit is relevant
 
           local connect_return_code = string.byte(buffer, 4)
-          if (connnect_return_code ~= 0) then
+          if (connect_return_code ~= 0) then
             error_message = MQTT.error_message.CONNACK[connect_return_code]
             MQTT.Utility.debug("MQTT.client:wait_for_connack() - "..error_message)
           end
@@ -500,31 +502,31 @@ function MQTT.client:handler()
       local index = 1
 
       -- Parse individual messages (each must be at least 2 bytes long)
-      -- Decode "remaining length" (MQTT v3.1 specification pages 6 and 7)
-
+      -- Decode "remaining length" [MQTT-v3.1.1] (2.2.3) - Pages 18,19
       while (index < #buffer) do
         local message_type_flags = string.byte(buffer, index)
         local multiplier = 1
-        local remaining_length = 0
+        local value = 0
 
         repeat
           index = index + 1
-          local digit = string.byte(buffer, index)
-          remaining_length = remaining_length + ((digit % 128) * multiplier)
+          local encodedByte = string.byte(buffer, index)      -- 'next byte from stream'
+          value = value + ((encodedByte % 128) * multiplier)  -- (encodedByte & 127) * multiplier
           multiplier = multiplier * 128
-        until digit < 128                              -- check continuation bit
-
-        local message = string.sub(buffer, index + 1, index + remaining_length)
-        if (#message == remaining_length) then
-          self:parse_message(message_type_flags, remaining_length, message)
+        until encodedByte < 128                               -- check continuation bit
+        -- here 'value' contains remaining_length
+        
+        local message = string.sub(buffer, index + 1, index + value)
+        if (#message == value) then
+          self:parse_message(message_type_flags, value, message)
         else
           MQTT.Utility.debug(
             "MQTT.client:handler(): Incorrect remaining length: " ..
-            remaining_length .. " ~= message length: " .. #message
+            value .. " ~= message length: " .. #message
           )
         end
 
-        index = index + remaining_length + 1
+        index = index + value + 1
       end
 
       -- Check for any left over bytes, i.e. partial message received
@@ -566,8 +568,12 @@ function MQTT.client:message_write(   -- Internal API
 
   local message = string.char(MQTT.Utility.shift_left(message_type, 4))
 
-  --HAKAN:[3.8.1] Byte 1 must be 0x82
-  if(message_type == MQTT.SUBSCRIBE)   then
+  -- [MQTT-v3.1.1](2.2.2) Fixed header flags:
+  -- Fixed header Byte 1 must be 0x82 for SUBSCRIBE and 0xA2 for UNSUBSCRIBE
+  -- Also 0x62 for PUBREL for when we support it.
+  if( message_type == MQTT.SUBSCRIBE or 
+      message_type == MQTT.UNSUBSCRIBE or
+      message_type == MQTT.PUBREL )  then
     message = string.char( MQTT.Utility.shift_left(message_type, 4) + 2)
   end
 
@@ -585,18 +591,19 @@ function MQTT.client:message_write(   -- Internal API
         )
     end
 
-    -- Encode "remaining length" (MQTT v3.1 specification pages 6 and 7)
-
-    local remaining_length = #payload
-
+    -- Encode "remaining length" [MQTT-v3.1.1] Section. (2.2.3 pages 18,19)
+    local encoded_rl_buf=""
+    local x = #payload
     repeat
-      local digit = remaining_length % 128
-      remaining_length = math.floor(remaining_length / 128)
-      if (remaining_length > 0) then digit = digit + 128 end -- continuation bit
-      message = message .. string.char(digit)
-    until remaining_length == 0
-
-    message = message .. payload
+      local encoded_byte = x % 128 -- modulo in lua: a % b == a - math.floor(a / b ) * b
+      x = math.floor(x / 128)      -- integer division :-(
+      if (x > 0) then 
+         encoded_byte = encoded_byte + 128  -- encodedByte OR 128
+      end 
+      encoded_rl_buf = encoded_rl_buf .. string.char(encoded_byte)  -- 'output' encodedByte
+    until x <= 0  -- while ( x > 0 )
+  
+    message = message .. encoded_rl_buf .. payload
   end
 
   local status, error_message = self.socket_client:send(message)
@@ -633,6 +640,7 @@ function MQTT.client:parse_message(                             -- Internal API
   -- TODO: MQTT.TYPE table should include "parser handler" function.
   --       This would nicely collapse the if .. then .. elseif .. end.
 
+  -- 
   if (message_type == MQTT.CONNACK) then
     self:parse_message_connack(message_type_flags, remaining_length, message)
 
@@ -869,11 +877,12 @@ end
 -- @param self
 -- @param #string topic
 -- @param #string payload
+-- @param #boolean  retain  publish this message with retain flag set
 -- @function [parent = #client] publish
 --
 function MQTT.client:publish(                                     -- Public API
   topic,
-  payload,	-- string
+  payload,	  -- string
   retain)     -- boolean
 
   if (self.connected == false) then

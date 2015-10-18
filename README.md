@@ -99,7 +99,7 @@ subscribes to the topic "test/2".  The command exits when the message
 
 This command publishes a single 'retained' message and then exits.
 
-      example/mqtt_publish -d -t -r test/1 -m "Test message"
+      example/mqtt_publish -d -r -t test/1 -m "Test message"
 
 Only the _--topic_ and _--message_ parameters are required.
 

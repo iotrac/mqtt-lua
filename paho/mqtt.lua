@@ -91,7 +91,7 @@ MQTT.Utility = require(folderOfThisFile .. 'utility')
 ---
 -- @field [parent = #mqtt_library] #number VERSION
 --
-MQTT.VERSION = 0x05
+MQTT.VERSION = 0x04
 
 ---
 -- @field [parent = #mqtt_library] #boolean ERROR_TERMINATE

@@ -43,6 +43,9 @@ end
 -- if (not is_openwrt()) then require("luarocks.require") end
 -- ------------------------------------------------------------------------- --
 
+local mqtt_client
+local error_message = nil
+
 function callback(
   topic,    -- string
   message)  -- string
@@ -52,7 +55,7 @@ function callback(
   mqtt_client:publish(args.topic_p, message)
 end
 
-print("[example_00 v0.2 2012-06-01]")
+print("\n--- example_00 v0.4-SNAPSHOT ---\n")
 
 args = lapp [[
   Subscribe to topic_s and publish all messages on topic_p
@@ -63,13 +66,13 @@ args = lapp [[
   -t,--topic_p  (default test/2)      Publish topic
 ]]
 
-local mqtt_client = MQTT.client.create(args.host, args.port, callback)
 
-mqtt_client:connect(args.id)
+mqtt_client = MQTT.client.create(args.host, args.port, callback)
+
+error_message = mqtt_client:connect(args.id)
+if error_message ~= nil then error(error_message) end
 
 mqtt_client:subscribe({ args.topic_s })
-
-local error_message = nil
 
 while (error_message == nil) do
   error_message = mqtt_client:handler()

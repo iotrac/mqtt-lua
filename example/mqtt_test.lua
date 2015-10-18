@@ -2,7 +2,7 @@
 --
 -- mqtt_test.lua
 -- ~~~~~~~~~~~~~
--- Version: 0.3 2015-10-15
+-- Version: 0.4-SNAPSHOT
 -- ------------------------------------------------------------------------- --
 -- Copyright (c) 2011-2012 Geekscape Pty. Ltd.
 -- All rights reserved. This program and the accompanying materials
@@ -34,8 +34,7 @@ package.path = package.path .. ";../paho/?.lua;paho/?.lua"
 local MQTT = require "mqtt"
 local socket = require "socket"
 local lapp = require("pl.lapp")
-
-local version = "0.3 2015-10-15"
+local version = "0.4-SNAPSHOT"
 
 -- ------------------------------------------------------------------------- --
 function is_openwrt()
@@ -44,20 +43,21 @@ end
 -- if (not is_openwrt()) then require("luarocks.require") end
 -- ------------------------------------------------------------------------- --
 
-local running = true
+print("\n--- mqtt_test (v." .. version .. ") ---\n")
 
+local running = true
+local counter = 0
+
+-- Define a function which is called by mqtt_client:handler(),
+-- whenever messages are received on the subscribed topics
 function callback(
   topic,    -- string
   payload)  -- string
 
-  print("mqtt_test:callback(): " .. topic .. ": " .. payload)
+  print("mqtt_test:callback(): " .. topic .. ":" .. payload)
 
   if payload == "quit" then running = false end
 end
-
-------------------------------------------------------------------- --
-
-print("mqtt_test (v." .. version .. ")")
 
 local args = lapp [[
   Test Lua MQTT client library
@@ -69,7 +69,6 @@ local args = lapp [[
   <host>        (default localhost)  MQTT server hostname
 ]]
 
-
 if (args.debug) then MQTT.Utility.set_debug(true) end
 
 local error_message = nil
@@ -80,14 +79,10 @@ mqtt_client.auth(mqtt_client, "user", "passwd")
 error_message = mqtt_client:connect("mqtt-test")
 if error_message ~= nil then error(error_message) end
 
-socket.sleep(2.0)  -- seconds
-
 error_message = mqtt_client:handler()
 
 mqtt_client:publish(args.topic_p, "*** Lua test start ***")
 mqtt_client:subscribe({ args.topic_s })
-
-local counter = 0
 
 while (error_message == nil and running) do
   error_message = mqtt_client:handler()
@@ -101,9 +96,11 @@ while (error_message == nil and running) do
 end
 
 if (error_message == nil) then
+  -- running == false, due to a message to topic "test/2" with payload "quit"	
   mqtt_client:unsubscribe({ args.topic_s })
   mqtt_client:destroy()
 else
+  -- An error occurred	
   print(error_message)
 end
 

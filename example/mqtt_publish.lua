@@ -39,7 +39,7 @@ end
 -- if (not is_openwrt()) then require("luarocks.require") end
 -- ------------------------------------------------------------------------- --
 
-print("[mqtt_publish v0.2 2012-06-01]")
+print("\n--- mqtt_publish v0.4-SNAPSHOT ---\n")
 
 
 local args = lapp [[
@@ -58,21 +58,23 @@ local args = lapp [[
 ]]
 
 local retain = false
+local error_message=nil
 
 if (args.debug) then MQTT.Utility.set_debug(true) end
 if args.retain then retain=true end
+
 local mqtt_client = MQTT.client.create(args.host, args.port)
 
 if (args.will_message == "."  or  args.will_topic == ".") then
-  mqtt_client:connect(args.id)
+  error_message = mqtt_client:connect(args.id)
 else
-  mqtt_client:connect(
-    args.id, args.will_topic, args.will_qos, args.will_retain, args.will_message
+  error_message = mqtt_client:connect(
+     args.id, args.will_topic, args.will_qos, args.will_retain, args.will_message
   )
 end
-print(args.retain)
+if error_message ~= nil then error(error_message) end
+
 mqtt_client:publish(args.topic, args.message, retain)
 
 mqtt_client:destroy()
 
--- ------------------------------------------------------------------------- --

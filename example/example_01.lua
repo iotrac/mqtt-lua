@@ -36,35 +36,49 @@ end
 -- if (not is_openwrt()) then require("luarocks.require") end
 -- ------------------------------------------------------------------------- --
 
-print("[example_01 v0.1]")
+print("\n--- example_01 v0.4-SNAPSHOT ---\n")
 
 args = lapp [[
   Subscribe to topic_s and publish all messages on topic_p
-  -g,--host_s   (default localhost)   Subscribe MQTT server hostname
-  -H,--host_p   (default localhost)   Publish MQTT server hostname
-  -i,--id       (default example_01)  MQTT client identifier
-  -p,--port_s   (default 1883)        Subscribe MQTT server port number
-  -q,--port_p   (default 1883)        Publish MQTT server port number
-  -s,--topic_s  (default test/1)      Subscribe topic
-  -t,--topic_p  (default test/2)      Publish topic
+  -g,--host_s   (default localhost)         Subscribe MQTT server hostname
+  -H,--host_p   (default iot.eclipse.org)   Publish MQTT server hostname
+  -i,--id       (default example_01)        MQTT client identifier
+  -p,--port_s   (default 1883)              Subscribe MQTT server port number
+  -q,--port_p   (default 1883)              Publish MQTT server port number
+  -s,--topic_s  (default test/1)            Subscribe topic
+  -t,--topic_p  (default test/2)            Publish topic
 ]]
-
-
-local mqtt_client1 = MQTT.client.create(args.host_s, args.port_s, callback)
-local mqtt_client2 = MQTT.client.create(args.host_p, args.port_p)
-
-mqtt_client1:connect(args.id .. "a")
-mqtt_client2:connect(args.id .. "b")
-
-mqtt_client1:subscribe({ args.topic_s })
 
 local error_message1 = nil
 local error_message2 = nil
 
+local mqtt_client1
+local mqtt_client2
+
+function callback(
+  topic,    -- string
+  message)  -- string
+
+  print("Topic: " .. topic .. ", message: '" .. message .. "'")
+
+  mqtt_client2:publish(args.topic_p, message)
+  end
+  
+mqtt_client1 = MQTT.client.create(args.host_s, args.port_s, callback)
+mqtt_client2 = MQTT.client.create(args.host_p, args.port_p)
+
+error_message1 = mqtt_client1:connect(args.id .. "-a")
+if error_message1 ~= nil then error(error_message1) end
+
+error_message2 = mqtt_client2:connect(args.id .. "-b")
+if error_message2 ~= nil then error(error_message2) end
+
+mqtt_client1:subscribe({ args.topic_s })
+
 while (error_message1 == nil and error_message2 == nil) do
   error_message1 = mqtt_client1:handler()
   error_message2 = mqtt_client2:handler()
-  socket.sleep(1.0)  -- seconds
+  socket.sleep(2.0)  -- seconds
 end
 
 if (error_message1 == nil) then
@@ -80,4 +94,4 @@ else
   print(error_message2)
 end
 
--- ------------------------------------------------------------------------- --
+

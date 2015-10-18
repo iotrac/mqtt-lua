@@ -28,12 +28,12 @@ plus command-line utilities for publishing and subscribing to MQTT topics. Typic
 MQTT stands for "Message Queue Telemetry Transport", a protocol authored by
 [Dr. Andy Stanford-Clark](http://wikipedia.org/wiki/Andy_Stanford-Clark)
 and Arlen Nipper. The protocol is a message-based, publish/subscribe transport layer, which is optimized 
-for simple telemetry applications running on small micro-controllers, such as an [Arduino](http://arduino.cc), [mbed](http:mbed.org)
-over possibly low-bandwidth connections.
+for simple telemetry applications running on devices such as Sierra Wireless LS300 Gateway, micro-controllers
+such as [Arduino](http://arduino.cc), [mbed](http:mbed.org) and the likes, over possibly low-bandwidth connections.
 
 This library partially (for now) implements 
 [MQTT protocol specification v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf).
-The intention is to implement full specification in the near future as much as possible in the constraints of Lua langulage and embedded platforms.
+The intention is to implement full specification in the near future as much as possible within the constraints of Lua langulage and embedded platforms.
 
 A good use-case for this library is running on constrained systems, such as [OpenWRT](http://openwrt.org),
 and acting as a gateway between non-MQTT clients and MQTT servers. An advantage of using Lua is that only a text editor is required for rapid
@@ -95,9 +95,11 @@ subscribes to the topic "test/2".  The command exits when the message
       -p,--port   (default 1883)       MQTT server port number
       <host>      (default localhost)  MQTT server hostname
 
-#### mqtt_publish: Publish a single message to a specified topic
+#### mqtt_publish: Publish a single retained message to a specified topic
 
-This command publishes a single 'retained' message and then exits.
+This command publishes a single retained message and then exits. Subscribe to topic from another Mqtt client to watch
+the numbers go up. The last message is retained, replacing the one before it. 
+You would see that last message if you unsubscribe and resubscribe, even if the mqtt_test is no longer running.
 
       example/mqtt_publish -d -r -t test/1 -m "Test message"
 
@@ -200,9 +202,9 @@ The complete functioning code can be viewed here ...
     end
 
 There are also a number of Lua MQTT client examples in the _example/_ directory.
-They can be run from the _lua/_ parent directory, as follow ...
+They can be run from the parent directory, as follow ...
 
-    cd mqtt_client/paho
+    cd mqtt_client
     example/example_00.lua
 
 

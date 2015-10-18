@@ -47,7 +47,7 @@ function callback(
   print("Topic: " .. topic .. ", message: '" .. message .. "'")
 end
 
-print("[mqtt_subscribe v0.2 2012-06-01]")
+print("\n--- mqtt_subscribe v0.4-SNAPSHOT ---\n")
 
 local args = lapp [[
   Subscribe to a specified MQTT topic
@@ -70,17 +70,18 @@ if (args.keepalive) then MQTT.client.KEEP_ALIVE_TIME = args.keepalive end
 
 local mqtt_client = MQTT.client.create(args.host, args.port, callback)
 
+local error_message=nil
+
 if (args.will_message == "."  or  args.will_topic == ".") then
-  mqtt_client:connect(args.id)
+  error_message = mqtt_client:connect(args.id)
 else
-  mqtt_client:connect(
-    args.id, args.will_topic, args.will_qos, args.will_retain, args.will_message
+  error_message = mqtt_client:connect(
+     args.id, args.will_topic, args.will_qos, args.will_retain, args.will_message
   )
 end
+if error_message ~= nil then error(error_message) end
 
 mqtt_client:subscribe({args.topic})
-
-local error_message = nil
 
 while (error_message == nil) do
   error_message = mqtt_client:handler()

@@ -106,11 +106,14 @@ local function socket_receive(socket_client, byte_count)
     byte_count = byte_count or 128   -- default  
     buffer = socket_client:recv(byte_count)
   else
-    response, error_message, partial_buffer = socket_client:receive("*a")
-    
+    response, error_message, partial_buffer = socket_client:receive(
+        byte_count or "*a")
+
     if response == nil then  --either error or partial response
       -- error_message-> "closed" | "timeout"
-      if error_message == "timeout" then error_message = nil end
+      if error_message == "timeout" then
+          error_message = nil
+      end
       result_buffer = partial_buffer
     else
       result_buffer = response

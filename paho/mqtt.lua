@@ -461,9 +461,10 @@ end
 -- `MQTT.client.KEEP_ALIVE_TIME`) which maintains the connection and
 -- services the incoming subscribed topic messages
 -- @param self
+-- @param income the rest buffer length from previous handler call
 -- @function [parent = #client] handler
 --
-function MQTT.client:handler()
+function MQTT.client:handler(income)
 
   if (self.connected == false) then
     error("MQTT.client:handler(): Not connected")
@@ -488,65 +489,93 @@ function MQTT.client:handler()
   -- Check for available client socket data
   -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   local ready = MQTT.Utility.socket_ready(self.socket_client)
-  if (ready) then
-    local error_message, buffer = MQTT.Utility.socket_receive(self.socket_client)
+  if (ready or income) then
+    --Here was a bug relevant to buffer reading from the tcp soket. The
+    --TCP socket is the stream socket, that means you can't take all available
+    --data from it and consider it as a whole MQTT message.
+    --To fix this we will perform several byte readings from buffer to calculate
+    --the MQTT message length first, then - we will read the tail of message.
 
-    if (error_message ~= nil) then
-      self:destroy()
-      error_message = "socket_client:receive(): " .. error_message
-      MQTT.Utility.debug(error_message)
-      return(error_message)
+    local buffer = nil
+    local error_message
+
+    if not income then
+	    error_message, income = MQTT.Utility.socket_receive(
+	      self.socket_client, 1)
+        if (error_message ~= nil) then
+          self:destroy()
+          error_message = "socket_client:receive(): " .. error_message
+          MQTT.Utility.debug(error_message)
+          return(error_message)
+        end
     end
+
+    buffer = income
 
     if (buffer ~= nil and #buffer > 0) then
       local index = 1
-
       -- Parse individual messages (each must be at least 2 bytes long)
       -- Decode "remaining length" [MQTT-v3.1.1] (2.2.3) - Pages 18,19
-      while (index < #buffer) do
-        local message_type_flags = string.byte(buffer, index)
-        local multiplier = 1
-        local value = 0
 
-        repeat
-          index = index + 1
-          local encodedByte = string.byte(buffer, index)      -- 'next byte from stream'
-          value = value + ((encodedByte % 128) * multiplier)  -- (encodedByte & 127) * multiplier
-          multiplier = multiplier * 128
-        until encodedByte < 128                               -- check continuation bit
-        -- here 'value' contains remaining_length
-        
-        local message = string.sub(buffer, index + 1, index + value)
-        if (#message == value) then
-          self:parse_message(message_type_flags, value, message)
-        else
-          MQTT.Utility.debug(
-            "MQTT.client:handler(): Incorrect remaining length: " ..
-            value .. " ~= message length: " .. #message
-          )
+      local message_type_flags = string.byte(buffer, index)
+      local multiplier = 1
+      local value = 0
+
+      repeat
+        if (#buffer <= index) then
+            error_message, income = MQTT.Utility.socket_receive(
+                self.socket_client, 1)
+            if (error_message ~= nil) then
+              self:destroy()
+              error_message = "socket_client:receive(): " .. error_message
+              MQTT.Utility.debug(error_message)
+              return(error_message)
+            end
+            buffer = buffer .. income
         end
+        index = index + 1
+        local encodedByte = string.byte(buffer, index)      -- 'next byte from stream'
+        value = value + ((encodedByte % 128) * multiplier)  -- (encodedByte & 127) * multiplier
+        multiplier = multiplier * 128
+      until encodedByte < 128                               -- check continuation bit
+      -- here 'value' contains remaining_length
 
-        index = index + value + 1
+	  local partial_len = #buffer - index
+	  while partial_len < value do
+        error_message, income = MQTT.Utility.socket_receive(
+          self.socket_client, value - partial_len)
+        if (error_message ~= nil) then
+          self:destroy()
+          error_message = "socket_client:receive(): " .. error_message
+          MQTT.Utility.debug(error_message)
+          return(error_message)
+        end
+        buffer = buffer .. income
+	    partial_len = #buffer - index
       end
 
-      -- Check for any left over bytes, i.e. partial message received
 
-      if (index ~= (#buffer + 1)) then
-        local error_message =
-          "MQTT.client:handler(): Partial message received" ..
-          index .. " ~= " .. (#buffer + 1)
+      local message = buffer:sub(index + 1, index + value)
+      if (#message == value) then
+        self:parse_message(message_type_flags, value, message)
+      else
+        MQTT.Utility.debug(
+          "MQTT.client:handler(): Incorrect remaining length: " ..
+          value .. " ~= message length: " .. #message
+        )
+      end
 
-        if (MQTT.ERROR_TERMINATE) then         -- TODO: Refactor duplicate code
-          self:destroy()
-          error(error_message)
-        else
-          MQTT.Utility.debug(error_message)
-        end
+      index = index + value + 1
+      if #buffer > index then
+        income = bufer:sub(index)
+      else
+        income = nil
       end
     end
   end
-
-  return(nil)
+  if income then
+	self:handler(income)
+  end
 end
 
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
